@@ -35,7 +35,7 @@ class App extends Component {
   }
 
   handleSearch = e => {
-    this.setState({searchQuery: e.target.value})
+    this.setState({searchQuery: e.target.value, currentPage: 1})
   }
 
   handleFilterChange = (field, value) => {
@@ -44,6 +44,7 @@ class App extends Component {
         ...prevState.filter,
         [field]: field === 'skills' ? value.map(skill => skill.toLowerCase().trim()) : value.toLowerCase().trim(),
       },
+      currentPage: 1,
     }))
   }
 
@@ -59,7 +60,7 @@ class App extends Component {
   }
 
   handleSubmit = async () => {
-    const{newCandidate} = this.state
+    const {newCandidate} = this.state
     console.log(newCandidate)
     try {
       const response = await fetch('http://localhost:3000/candidates', {
@@ -86,7 +87,15 @@ class App extends Component {
   }
 
   render() {
-    const {candidates, searchQuery, filter, currentPage, candidatesPerPage, showFilter, newCandidate} = this.state
+    const {
+      candidates,
+      searchQuery,
+      filter,
+      currentPage,
+      candidatesPerPage,
+      showFilter,
+      newCandidate,
+    } = this.state
 
     const filteredCandidates = candidates.filter(candidate => {
       const skillsArray = candidate.skills.toLowerCase().split(',').map(skill => skill.trim())
@@ -103,16 +112,26 @@ class App extends Component {
     const indexOfLastCandidate = currentPage * candidatesPerPage
     const indexOfFirstCandidate = indexOfLastCandidate - candidatesPerPage
     const currentCandidates = filteredCandidates.slice(indexOfFirstCandidate, indexOfLastCandidate)
+    const totalPages = Math.ceil(filteredCandidates.length / candidatesPerPage)
 
     return (
       <div className="container">
         <h2>Candidate Management</h2>
         <div className="top-bar">
-          <input type="text" placeholder="Search by name, phone, or email..." onChange={this.handleSearch} />
-          <button type="button" onClick={() => this.setState({showFilter: !showFilter})} className="filter-button">
+          <input
+            type="text"
+            placeholder="Search by name, phone, or email..."
+            onChange={this.handleSearch}
+          />
+          <button
+            type="button"
+            onClick={() => this.setState({showFilter: !showFilter})}
+            className="filter-button"
+          >
             <FaFilter />
           </button>
         </div>
+
         {showFilter && (
           <div className="filter-section">
             <select onChange={e => this.handleFilterChange('gender', e.target.value)}>
@@ -127,9 +146,71 @@ class App extends Component {
               <option value="2 years">2 Years</option>
               <option value="3 years">3 Years</option>
             </select>
-            <input type="text" placeholder="Filter by skills (comma separated)" onChange={e => this.handleFilterChange('skills', e.target.value.split(','))} />
+            <input
+              type="text"
+              placeholder="Filter by skills (comma separated)"
+              onChange={e =>
+                this.handleFilterChange('skills', e.target.value.split(','))
+              }
+            />
           </div>
         )}
+
+        <div className="add-candidate-form">
+          <h3>Add Candidate</h3>
+          <input
+            type="text"
+            name="name"
+            placeholder="Name"
+            value={newCandidate.name}
+            onChange={this.handleInputChange}
+          />
+          <input
+            type="text"
+            name="phone"
+            placeholder="Phone"
+            value={newCandidate.phone}
+            onChange={this.handleInputChange}
+          />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={newCandidate.email}
+            onChange={this.handleInputChange}
+          />
+          <select
+            name="gender"
+            onChange={this.handleInputChange}
+            value={newCandidate.gender}
+          >
+            <option value="">Select Gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+          <select
+            name="experience"
+            onChange={this.handleInputChange}
+            value={newCandidate.experience}
+          >
+            <option value="">Select Experience</option>
+            <option value="1 Year">1 Year</option>
+            <option value="2 Years">2 Years</option>
+            <option value="3 Years">3 Years</option>
+          </select>
+          <input
+            type="text"
+            name="skills"
+            placeholder="Skills (comma separated)"
+            value={newCandidate.skills}
+            onChange={this.handleInputChange}
+          />
+          <button type="button" onClick={this.handleSubmit}>
+            Submit
+          </button>
+        </div>
+
         <table>
           <thead>
             <tr>
@@ -154,37 +235,35 @@ class App extends Component {
             ))}
           </tbody>
         </table>
-        <div className="add-candidate-form">
-          <h3>Add Candidate</h3>
-          <input type="text" name="name" placeholder="Name" value={newCandidate.name} onChange={this.handleInputChange} />
-          <input type="text" name="phone" placeholder="Phone" value={newCandidate.phone} onChange={this.handleInputChange} />
-          <input type="email" name="email" placeholder="Email" value={newCandidate.email} onChange={this.handleInputChange} />
-          <select
-              name="gender"
-              onChange={this.handleInputChange}
-              value={newCandidate.gender}
+
+        <div className="pagination">
+          <button
+            onClick={() => this.handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </button>
+
+          {Array.from({ length: totalPages }, (_, index) => (
+            <button
+              key={index + 1}
+              onClick={() => this.handlePageChange(index + 1)}
+              className={currentPage === index + 1 ? 'active-page' : ''}
             >
-              <option value="">Select Gender</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
-            </select>
-            <select
-              name="experience"
-              onChange={this.handleInputChange}
-              value={newCandidate.experience}
-            >
-              <option value="">Select Experience</option>
-              <option value="1 Year">1 Year</option>
-              <option value="2 Years">2 Years</option>
-              <option value="3 Years">3 Years</option>
-            </select>
-          <input type="text" name="skills" placeholder="Skills (comma separated)" value={newCandidate.skills} onChange={this.handleInputChange} />
-          <button type="button" onClick={this.handleSubmit}>Submit</button>
+              {index + 1}
+            </button>
+          ))}
+
+          <button
+            onClick={() => this.handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </button>
         </div>
       </div>
     )
   }
 }
 
-export default App;
+export default App
